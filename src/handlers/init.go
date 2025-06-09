@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"my-discord-bot/src/types"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -11,8 +12,15 @@ import (
 func RegisterCommands(discord *discordgo.Session) {
 	// Add message handler for all incoming messages
 	discord.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := types.CommandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
+		switch i.Type {
+		case discordgo.InteractionApplicationCommand:
+			if h, ok := types.CommandHandlers[i.ApplicationCommandData().Name]; ok {
+				h(s, i)
+			}
+		case discordgo.InteractionModalSubmit:
+			if h, ok := types.ModalHandlers[strings.Split(i.ModalSubmitData().CustomID, "_")[0]]; ok {
+				h(s, i)
+			}
 		}
 	})
 
@@ -25,13 +33,12 @@ func RegisterCommands(discord *discordgo.Session) {
 		return
 	}
 	for _, g := range discord.State.Guilds {
-		log.Printf("Registering commands for %v\n", g.ID)
 		for _, v := range types.Commands {
 			cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, g.ID, v)
 			if err != nil {
 				log.Panicf("Cannot create '%v' command: %v\n", v.Name, err)
 			}
-			log.Printf("Registered command %v for %v\n", v.Name, g.ID)
+			log.Printf("Registered %v command for %v\n", v.Name, g.ID)
 			types.RegisteredCommands = append(types.RegisteredCommands, cmd)
 		}
 	}

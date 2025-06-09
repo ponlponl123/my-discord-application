@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"my-discord-bot/src/handlers"
+	"my-discord-bot/src/types"
 	"my-discord-bot/src/utils"
 	"os"
 	"os/signal"
@@ -25,8 +26,6 @@ func main() {
 		log.Println("Error creating Discord session")
 		panic(err)
 	}
-	// Register all commands
-	handlers.RegisterCommands(discord)
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!")
 	})
@@ -38,8 +37,13 @@ func main() {
 		panic(err)
 	}
 	defer discord.Close()
-
 	log.Printf("Discord session created, logged in as %v#%v (%v)\n", discord.State.User.Username, discord.State.User.Discriminator, discord.State.User.ID)
+
+	// Register all commandsm events
+	handlers.RegisterCommands(discord)
+	for _, v := range types.UniversalEvents {
+		v(discord)
+	}
 
 	stchan := make(chan os.Signal, 1)
 	signal.Notify(stchan, syscall.SIGTERM, os.Interrupt, syscall.SIGSEGV)
