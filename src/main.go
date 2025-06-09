@@ -1,0 +1,59 @@
+package main
+
+import (
+	"log"
+	"my-discord-bot/src/handlers"
+	"my-discord-bot/src/utils"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+)
+
+func main() {
+	log.Println("Starting discord bot...")
+
+	token := utils.GetEnv("DISCORD_TOKEN", "")
+	if token == "" {
+		log.Println("No token provided, exiting...")
+		return
+	}
+	discord, err := discordgo.New("Bot " + token)
+	if err != nil {
+		log.Println("Error creating Discord session")
+		panic(err)
+	}
+	// Register all commands
+	handlers.RegisterCommands(discord)
+	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Println("Bot is up!")
+	})
+
+	// Open connection to Discord
+	err = discord.Open()
+	if err != nil {
+		log.Println("Open Discord connection failed")
+		panic(err)
+	}
+	defer discord.Close()
+
+	log.Printf("Discord session created, logged in as %v#%v (%v)\n", discord.State.User.Username, discord.State.User.Discriminator, discord.State.User.ID)
+
+	stchan := make(chan os.Signal, 1)
+	signal.Notify(stchan, syscall.SIGTERM, os.Interrupt, syscall.SIGSEGV)
+end:
+	for {
+		select {
+		case <-stchan:
+			log.Println("Interrupt signal received, shutting down...")
+			log.Println("Cleaning up registered commands before exit...")
+			handlers.CleanUpCommands(discord)
+			log.Println("Exiting...")
+			break end
+		default:
+		}
+		time.Sleep(time.Second)
+	}
+}
