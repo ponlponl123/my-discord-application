@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"my-discord-bot/src/utils"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -20,19 +21,6 @@ func Referal(s *discordgo.Session, i *discordgo.InteractionCreate) {
 							Label:       "Referal",
 							Style:       discordgo.TextInputShort,
 							Placeholder: "XXX-XXX",
-							Required:    true,
-							MaxLength:   100,
-							MinLength:   1,
-						},
-					},
-				},
-				discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "target",
-							Label:       "Target",
-							Style:       discordgo.TextInputShort,
-							Placeholder: "0123456789",
 							Required:    true,
 							MaxLength:   100,
 							MinLength:   1,
@@ -65,25 +53,44 @@ func ReferalModal(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	userid := strings.Split(data.CustomID, "_")[1]
 	referal := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-	target := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
 	resultMsg := "Failed, target is not valid or invalid referal code."
-	if referal == "my-secret-referal" && target != "" {
-		_, err := s.Channel(target)
-		if err == nil {
-			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				PermissionOverwrites: []*discordgo.PermissionOverwrite{
-					{
-						ID:   userid,
-						Type: discordgo.PermissionOverwriteTypeMember,
-						Allow: discordgo.PermissionViewChannel |
-							discordgo.PermissionSendMessages,
-					},
-				},
+	result := utils.ReferalApply(s, userid, referal, i.GuildID)
+	embeds := []*discordgo.MessageEmbed{}
+	if result.IsClaimed {
+		resultMsg = "## Referal already claimed!\nYou're not allowed to claim this referal again."
+	}
+	if len(result.Result) > 0 && !result.IsClaimed {
+		resultMsg = "## Referal claimed!\nPermission granted to <@" + userid + ">"
+		fields := []*discordgo.MessageEmbedField{}
+		for _, v := range result.Result {
+			var name string
+			var value string
+			switch v.Type {
+			case "channel":
+				name = "Access to " + v.Type
+				for _, b := range v.Id {
+					value += "<#" + b + ">" + "\n"
+				}
+			case "role":
+				name = "Grant " + v.Type
+				for _, b := range v.Id {
+					value += "<@&" + b + ">" + "\n"
+				}
+			}
+			fields = append(fields, &discordgo.MessageEmbedField{
+				Name:   name,
+				Value:  value,
+				Inline: false,
 			})
-			resultMsg = "## Referal success!\nPermission granted to <@" + userid + ">"
 		}
+		embeds = append(embeds, &discordgo.MessageEmbed{
+			Title:  "Your benefit",
+			Fields: fields,
+			Color:  0x00ff00,
+		})
 	}
 	s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &resultMsg,
+		Embeds:  &embeds,
 	})
 }

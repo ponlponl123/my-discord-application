@@ -35,22 +35,21 @@ var ModalHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interacti
 
 // UniversalEvents is a slice of functions to register event handlers
 var UniversalEvents = []func(s *discordgo.Session){
+	// Member Events
 	func(s *discordgo.Session) {
 		s.AddHandler(events.MemberJoin)
-	},
-	func(s *discordgo.Session) {
 		s.AddHandler(events.MemberLeave)
 	},
+	// Guild Events
+	func(s *discordgo.Session) {
+		s.AddHandler(events.GuildCreate)
+		s.AddHandler(events.GuildDelete)
+	},
+	// Message Events
 	func(s *discordgo.Session) {
 		s.AddHandler(events.MessageCreate)
-	},
-	func(s *discordgo.Session) {
 		s.AddHandler(events.MessageDelete)
-	},
-	func(s *discordgo.Session) {
 		s.AddHandler(events.MessageUpdate)
-	},
-	func(s *discordgo.Session) {
 		s.AddHandler(events.MessageReactionAdd)
 	},
 }

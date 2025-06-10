@@ -28,6 +28,7 @@ func main() {
 	}
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!")
+		utils.DB = utils.ConnectDB()
 	})
 
 	// Open connection to Discord
@@ -54,6 +55,8 @@ end:
 			log.Println("Interrupt signal received, shutting down...")
 			log.Println("Cleaning up registered commands before exit...")
 			handlers.CleanUpCommands(discord)
+			log.Println("Closing database connection...")
+			utils.DB.Close()
 			log.Println("Exiting...")
 			break end
 		default:
