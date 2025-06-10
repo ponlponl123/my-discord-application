@@ -89,16 +89,14 @@ func ReferalApply(s *discordgo.Session, grant_to string, code string, guildId st
 		switch refer_to.Type {
 		case "channel":
 			for _, channelId := range refer_to.Id {
-				_, err := s.Channel(channelId)
+				channel, err := s.Channel(channelId)
 				if err == nil {
 					_, err = s.ChannelEdit(channelId, &discordgo.ChannelEdit{
-						PermissionOverwrites: []*discordgo.PermissionOverwrite{
-							{
-								ID:    grant_to,
-								Type:  discordgo.PermissionOverwriteTypeMember,
-								Allow: discordgo.PermissionViewChannel,
-							},
-						},
+						PermissionOverwrites: append(channel.PermissionOverwrites, &discordgo.PermissionOverwrite{
+							ID:    grant_to,
+							Type:  discordgo.PermissionOverwriteTypeMember,
+							Allow: discordgo.PermissionViewChannel,
+						}),
 					})
 					if err != nil {
 						log.Println("Error while granting channel permission")

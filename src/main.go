@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"my-discord-bot/src/handlers"
-	"my-discord-bot/src/types"
+	"my-discord-bot/src/handlers/events"
 	"my-discord-bot/src/utils"
 	"os"
 	"os/signal"
@@ -12,6 +12,26 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 )
+
+var GlobalEvents = []func(s *discordgo.Session){
+	// Member Events
+	func(s *discordgo.Session) {
+		s.AddHandler(events.MemberJoin)
+		s.AddHandler(events.MemberLeave)
+	},
+	// Guild Events
+	func(s *discordgo.Session) {
+		s.AddHandler(events.GuildCreate)
+		s.AddHandler(events.GuildDelete)
+	},
+	// Message Events
+	func(s *discordgo.Session) {
+		s.AddHandler(events.MessageCreate)
+		s.AddHandler(events.MessageDelete)
+		s.AddHandler(events.MessageUpdate)
+		s.AddHandler(events.MessageReactionAdd)
+	},
+}
 
 func main() {
 	log.Println("Starting discord bot...")
@@ -46,8 +66,8 @@ func main() {
 	defer discord.Close()
 
 	// Register all commandsm events
-	handlers.RegisterCommands(discord)
-	for _, v := range types.UniversalEvents {
+	handlers.Init(discord)
+	for _, v := range GlobalEvents {
 		v(discord)
 	}
 
