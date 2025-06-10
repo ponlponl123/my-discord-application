@@ -1,0 +1,14 @@
+services:
+  my-discord-application:
+    container_name: discord-application
+    build: .
+    environment:
+      # Discord
+      - DISCORD_TOKEN="YOUR_TOKEN_HERE"
+
+      # Database
+      - DB_USER="username"
+      - DB_PASS="passwd"
+      - DB_HOST="localhost"
+      - DB_PORT="3306"
+      - DB_NAME="mydb"
