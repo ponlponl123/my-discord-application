@@ -29,6 +29,7 @@ func main() {
 	log.Println("Discord session created")
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!, logged in as ", r.User.Username, "#", r.User.Discriminator, "(", r.User.ID, ")")
+		utils.SetDefaultActivity(discord)
 		utils.DB, err = utils.ConnectDB()
 		if err != nil {
 			log.Println("Error connecting to database")
