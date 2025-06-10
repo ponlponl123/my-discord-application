@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
@@ -18,6 +19,7 @@ type Referal struct {
 	Code      string
 	Result    []ReferalResult
 	IsClaimed bool
+	Error     error
 }
 
 func ReferalCheck(code string, guildId string, claimer string) Referal {
@@ -30,13 +32,17 @@ func ReferalCheck(code string, guildId string, claimer string) Referal {
 		// If no rows or other error, return empty result
 		return Referal{}
 	}
-
 	var is_claimed string
 	row = DB.QueryRow("SELECT identifier AS is_claimed FROM referal_used WHERE code = ? AND guild = ? AND `by` = ? AND ignored = 0", code, guildId, claimer)
 	err = row.Scan(&is_claimed)
 	if err != nil {
-		log.Println("Error while checking referal claimer")
-		log.Fatalln(err)
+		// If no rows found, it means the referral is not claimed yet
+		if err.Error() == "sql: no rows in result set" {
+			is_claimed = ""
+		} else {
+			log.Println("Error while checking referal claimer:", err)
+			return Referal{}
+		}
 	}
 	if is_claimed == id {
 		return Referal{
@@ -74,8 +80,10 @@ func ReferalApply(s *discordgo.Session, grant_to string, code string, guildId st
 	_, err = DB.Exec("INSERT INTO referal_used (code, guild, date, `by`, identifier) VALUES (?, ?, ?, ?, ?)", code, guildId, time.Now(), grant_to, referal.Id)
 	if err != nil {
 		log.Println("Error while inserting referal claimer")
-		log.Fatalln(err)
-		return Referal{}
+		log.Println("Error:", err)
+		return Referal{
+			Error: errors.New("error while making referal claimer"),
+		}
 	}
 	for _, refer_to := range referal.Result {
 		switch refer_to.Type {
@@ -83,32 +91,45 @@ func ReferalApply(s *discordgo.Session, grant_to string, code string, guildId st
 			for _, channelId := range refer_to.Id {
 				_, err := s.Channel(channelId)
 				if err == nil {
-					s.ChannelEdit(channelId, &discordgo.ChannelEdit{
+					_, err = s.ChannelEdit(channelId, &discordgo.ChannelEdit{
 						PermissionOverwrites: []*discordgo.PermissionOverwrite{
 							{
-								ID:   grant_to,
-								Type: discordgo.PermissionOverwriteTypeMember,
-								Allow: discordgo.PermissionViewChannel |
-									discordgo.PermissionSendMessages,
+								ID:    grant_to,
+								Type:  discordgo.PermissionOverwriteTypeMember,
+								Allow: discordgo.PermissionViewChannel,
 							},
 						},
 					})
+					if err != nil {
+						log.Println("Error while granting channel permission")
+						log.Println("Error:", err)
+						return Referal{
+							Error: errors.New("error while granting channel permission"),
+						}
+					}
 				}
 			}
 		case "role":
+			roles, err := s.GuildRoles(guildId)
+			if err != nil {
+				log.Println("Error while getting guild roles")
+				log.Println("Error:", err)
+				return Referal{}
+			}
+			roleSet := make(map[string]struct{}, len(roles))
+			for _, role := range roles {
+				roleSet[role.ID] = struct{}{}
+			}
 			for _, roleId := range refer_to.Id {
-				_, err := s.GuildRoles(roleId)
-				if err == nil {
-					s.ChannelEdit(roleId, &discordgo.ChannelEdit{
-						PermissionOverwrites: []*discordgo.PermissionOverwrite{
-							{
-								ID:   grant_to,
-								Type: discordgo.PermissionOverwriteTypeMember,
-								Allow: discordgo.PermissionViewChannel |
-									discordgo.PermissionSendMessages,
-							},
-						},
-					})
+				if _, exists := roleSet[roleId]; exists {
+					err = s.GuildMemberRoleAdd(guildId, grant_to, roleId)
+					if err != nil {
+						log.Println("Error while adding role to member")
+						log.Println("Error:", err)
+						return Referal{
+							Error: errors.New("error while giving role to member"),
+						}
+					}
 				}
 			}
 		}

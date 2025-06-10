@@ -12,7 +12,7 @@ var (
 	DB *sql.DB
 )
 
-func ConnectDB() *sql.DB {
+func ConnectDB() (*sql.DB, error) {
 	log.Println("Connecting to database connection...")
 	connection := strings.Join([]string{
 		GetEnv("DB_USER", ""),
@@ -29,14 +29,16 @@ func ConnectDB() *sql.DB {
 	db, err := sql.Open("mysql", connection)
 	if err != nil {
 		log.Println("Error connecting to database")
-		panic(err)
+		log.Println("Error:", err)
+		return nil, err
 	}
 	log.Println("Pinging database...")
 	err = db.Ping()
 	if err != nil {
 		log.Println("Error pinging database")
-		panic(err)
+		log.Println("Error:", err)
+		return nil, err
 	}
 	log.Println("Connected to database")
-	return db
+	return db, nil
 }

@@ -24,18 +24,22 @@ func main() {
 	discord, err := discordgo.New("Bot " + token)
 	if err != nil {
 		log.Println("Error creating Discord session")
-		panic(err)
+		log.Fatalln(err)
 	}
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		log.Println("Bot is up!")
-		utils.DB = utils.ConnectDB()
+		utils.DB, err = utils.ConnectDB()
+		if err != nil {
+			log.Println("Error connecting to database")
+			log.Fatalln(err)
+		}
 	})
 
 	// Open connection to Discord
 	err = discord.Open()
 	if err != nil {
 		log.Println("Open Discord connection failed")
-		panic(err)
+		log.Fatalln(err)
 	}
 	defer discord.Close()
 	log.Printf("Discord session created, logged in as %v#%v (%v)\n", discord.State.User.Username, discord.State.User.Discriminator, discord.State.User.ID)

@@ -59,7 +59,14 @@ func ReferalModal(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if result.IsClaimed {
 		resultMsg = "## Referal already claimed!\nYou're not allowed to claim this referal again."
 	}
-	if len(result.Result) > 0 && !result.IsClaimed {
+	if result.Error != nil {
+		embeds = append(embeds, &discordgo.MessageEmbed{
+			Title:       "Internal Application Error!",
+			Description: "```" + result.Error.Error() + "```",
+			Color:       0xff0000,
+		})
+	}
+	if len(result.Result) > 0 && !result.IsClaimed && result.Error == nil {
 		resultMsg = "## Referal claimed!\nPermission granted to <@" + userid + ">"
 		fields := []*discordgo.MessageEmbedField{}
 		for _, v := range result.Result {
