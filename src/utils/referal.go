@@ -24,7 +24,7 @@ type Referal struct {
 
 func ReferalCheck(code string, guildId string, claimer string) Referal {
 	referal := []ReferalResult{}
-	row := DB.QueryRow("SELECT id, benefit FROM referal WHERE code = ? AND guild = ?", code, guildId)
+	row := DB.QueryRow("SELECT id, benefit FROM referal WHERE code = ? AND guild = ? AND disabled = 0", code, guildId)
 	var id string
 	var benefit = []byte("")
 	err := row.Scan(&id, &benefit)
