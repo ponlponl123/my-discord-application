@@ -90,20 +90,28 @@ func ReferalApply(s *discordgo.Session, grant_to string, code string, guildId st
 		case "channel":
 			for _, channelId := range refer_to.Id {
 				channel, err := s.Channel(channelId)
-				if err == nil {
-					_, err = s.ChannelEdit(channelId, &discordgo.ChannelEdit{
-						PermissionOverwrites: append(channel.PermissionOverwrites, &discordgo.PermissionOverwrite{
-							ID:    grant_to,
-							Type:  discordgo.PermissionOverwriteTypeMember,
-							Allow: discordgo.PermissionViewChannel,
-						}),
-					})
-					if err != nil {
-						log.Println("Error while granting channel permission")
-						log.Println("Error:", err)
-						return Referal{
-							Error: errors.New("error while granting channel permission"),
-						}
+				if err != nil {
+					log.Println("Error while getting channel")
+					log.Println("Error:", err)
+					return Referal{
+						Error: errors.New("error while getting channel"),
+					}
+				}
+				if channel.PermissionOverwrites == nil {
+					channel.PermissionOverwrites = []*discordgo.PermissionOverwrite{}
+				}
+				_, err = s.ChannelEdit(channelId, &discordgo.ChannelEdit{
+					PermissionOverwrites: append(channel.PermissionOverwrites, &discordgo.PermissionOverwrite{
+						ID:    grant_to,
+						Type:  discordgo.PermissionOverwriteTypeMember,
+						Allow: discordgo.PermissionViewChannel,
+					}),
+				})
+				if err != nil {
+					log.Println("Error while granting channel permission")
+					log.Println("Error:", err)
+					return Referal{
+						Error: errors.New("error while granting channel permission"),
 					}
 				}
 			}
